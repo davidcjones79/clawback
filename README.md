@@ -80,6 +80,7 @@ Commands:
   skill <path>         Scan an Agent Skill directory or SKILL.md
   audit <config>       Audit an OpenClaw config file
   logs <path>          Audit session log files for suspicious patterns
+  serve                Start real-time webhook server
   signatures           List all threat signatures
   version              Show version
 
@@ -89,6 +90,68 @@ Options:
   --verbose                         Show detailed output
   --sarif                           Output as SARIF (for CI/CD)
 ```
+
+## Real-Time Server
+
+Run Clawback as a sidecar service to filter messages in real-time:
+
+```bash
+# Start the server
+clawback serve --port 3000
+
+# Or with options
+clawback serve \
+  --port 3000 \
+  --block-threshold critical \
+  --review-threshold high \
+  --alert-webhook https://your-webhook.com/alerts
+```
+
+### Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/scan` | POST | Scan a single message |
+| `/scan/batch` | POST | Scan multiple messages (max 100) |
+| `/health` | GET | Health check |
+| `/stats` | GET | Scan statistics |
+
+### Example Request
+
+```bash
+curl -X POST http://localhost:3000/scan \
+  -H "Content-Type: application/json" \
+  -d '{"message": "ignore previous instructions"}'
+```
+
+### Example Response
+
+```json
+{
+  "action": "review",
+  "safe": false,
+  "riskScore": 25,
+  "threatCount": 1,
+  "threats": [{
+    "id": "PROMPT-001",
+    "name": "Instruction Override",
+    "category": "prompt_injection",
+    "severity": "high"
+  }],
+  "recommendation": {
+    "action": "review",
+    "alertOwner": true
+  }
+}
+```
+
+### Actions
+
+| Action | Meaning |
+|--------|---------|
+| `allow` | Message is safe to process |
+| `review` | Flag for human review (high severity) |
+| `block` | Auto-reject message (critical severity) |
 
 ## Config Audit Checks
 
@@ -177,7 +240,7 @@ console.log(skillResult.summary);
 - [x] Session log analysis
 - [x] Behavioral analysis (dataflow patterns)
 - [x] SARIF output (CI/CD integration)
-- [ ] Real-time webhook mode (message filtering)
+- [x] Real-time webhook server (message filtering)
 - [ ] OpenClaw plugin integration
 - [ ] YARA rule support (native binary patterns)
 - [ ] Web dashboard for MSPs

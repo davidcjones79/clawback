@@ -29,6 +29,11 @@ const {
 } = require('./openclaw-hook');
 
 const {
+  startServer,
+  createRequestHandler,
+} = require('./server');
+
+const {
   calculateRiskScore,
   getLineNumber,
   parseSimpleYaml,
@@ -52,6 +57,10 @@ module.exports = {
   checkMessage,
   isSafe,
   formatAlert,
+  
+  // Server
+  startServer,
+  createRequestHandler,
   
   // Utilities
   calculateRiskScore,

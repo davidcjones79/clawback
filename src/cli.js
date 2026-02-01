@@ -34,6 +34,7 @@ COMMANDS:
   skill <path>         Scan an Agent Skill directory or SKILL.md
   audit <config>       Audit an OpenClaw config file
   logs <path>          Audit session log files for suspicious patterns
+  serve                Start real-time webhook server
   signatures           List all threat signatures
   version              Show version
 
@@ -477,6 +478,31 @@ function main() {
         console.error(`Error: ${err.message}`);
         process.exit(1);
       });
+      break;
+    }
+    
+    case 'serve': {
+      // Delegate to server module
+      const { startServer } = require('./server');
+      const serverConfig = {};
+      
+      for (let i = 1; i < args.length; i++) {
+        if (args[i] === '--port' || args[i] === '-p') {
+          serverConfig.port = parseInt(args[++i], 10);
+        } else if (args[i] === '--host') {
+          serverConfig.host = args[++i];
+        } else if (args[i] === '--block-threshold') {
+          serverConfig.blockThreshold = args[++i];
+        } else if (args[i] === '--review-threshold') {
+          serverConfig.reviewThreshold = args[++i];
+        } else if (args[i] === '--alert-webhook') {
+          serverConfig.alertWebhook = args[++i];
+        } else if (args[i] === '--rate-limit') {
+          serverConfig.rateLimit = parseInt(args[++i], 10);
+        }
+      }
+      
+      startServer(serverConfig);
       break;
     }
     
