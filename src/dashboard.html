@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clawback Security Monitor</title>
+  <style>
+    :root {
+      --bg-primary: #0f1419;
+      --bg-secondary: #1a1f26;
+      --bg-card: #242b33;
+      --border: #2f3943;
+      --text-primary: #e7e9ea;
+      --text-secondary: #8b98a5;
+      --accent: #1d9bf0;
+      --success: #00ba7c;
+      --warning: #f7931a;
+      --danger: #f4212e;
+      --critical: #9c27b0;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .logo svg {
+      width: 40px;
+      height: 40px;
+    }
+    
+    .logo h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--bg-card);
+      border-radius: 20px;
+      font-size: 14px;
+    }
+    
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    
+    .status-dot.disconnected {
+      background: var(--danger);
+      animation: none;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .stat-card.blocked .stat-value { color: var(--danger); }
+    .stat-card.review .stat-value { color: var(--warning); }
+    .stat-card.allowed .stat-value { color: var(--success); }
+    .stat-card.total .stat-value { color: var(--accent); }
+    
+    /* Main Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+    
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .panel-badge {
+      font-size: 12px;
+      color: var(--text-secondary);
+      padding: 4px 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+    }
+    
+    .panel-body {
+      padding: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    /* Threat List */
+    .threat-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .threat-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .severity-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    
+    .severity-critical { background: var(--critical); color: white; }
+    .severity-high { background: var(--danger); color: white; }
+    .severity-medium { background: var(--warning); color: black; }
+    .severity-low { background: var(--text-secondary); color: var(--bg-primary); }
+    
+    .threat-details {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .threat-name {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    
+    .threat-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    .threat-match {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: monospace;
+      background: var(--bg-primary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+      word-break: break-all;
+    }
+    
+    /* Category Chart */
+    .category-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .category-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .category-label {
+      width: 140px;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .category-bar-bg {
+      flex: 1;
+      height: 24px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .category-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--warning));
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    
+    .category-count {
+      width: 50px;
+      text-align: right;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    /* Risk Distribution */
+    .risk-chart {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      height: 120px;
+      padding-top: 20px;
+    }
+    
+    .risk-bar {
+      flex: 1;
+      max-width: 40px;
+      background: var(--accent);
+      border-radius: 4px 4px 0 0;
+      transition: height 0.5s ease;
+      position: relative;
+    }
+    
+    .risk-bar:hover::after {
+      content: attr(data-count);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 8px;
+      background: var(--bg-primary);
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    
+    .risk-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    
+    /* Uptime */
+    .uptime {
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .uptime-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    
+    .uptime-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    /* Rate */
+    .rate-display {
+      display: flex;
+      justify-content: space-around;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .rate-item .value {
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    .rate-item .label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+    
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    
+    /* Footer */
+    footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="45" stroke="#1d9bf0" stroke-width="4" fill="none"/>
+          <path d="M30 50 L45 65 L70 35" stroke="#00ba7c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <h1>Clawback Monitor</h1>
+      </div>
+      <div class="status-badge">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting...</span>
+      </div>
+    </header>
+    
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-value" id="totalScans">0</div>
+        <div class="stat-label">Total Scans</div>
+      </div>
+      <div class="stat-card blocked">
+        <div class="stat-value" id="blocked">0</div>
+        <div class="stat-label">Blocked</div>
+      </div>
+      <div class="stat-card review">
+        <div class="stat-value" id="flagged">0</div>
+        <div class="stat-label">Flagged</div>
+      </div>
+      <div class="stat-card allowed">
+        <div class="stat-value" id="passed">0</div>
+        <div class="stat-label">Allowed</div>
+      </div>
+    </div>
+    
+    <div class="main-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🚨 Recent Threats</span>
+          <span class="panel-badge" id="threatCount">0 threats</span>
+        </div>
+        <div class="panel-body">
+          <div class="threat-list" id="threatList">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+              <div>No threats detected yet</div>
+              <div style="margin-top: 4px; font-size: 12px;">Threats will appear here in real-time</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📊 Threats by Category</span>
+        </div>
+        <div class="panel-body">
+          <div class="category-chart" id="categoryChart">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              </svg>
+              <div>No category data yet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📈 Risk Score Distribution</span>
+        </div>
+        <div class="panel-body">
+          <div class="risk-chart" id="riskChart"></div>
+          <div class="risk-labels">
+            <span>0</span>
+            <span>25</span>
+            <span>50</span>
+            <span>75</span>
+            <span>100</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">⚡ Performance</span>
+        </div>
+        <div class="panel-body" style="padding: 0;">
+          <div class="uptime">
+            <div class="uptime-value" id="uptime">0h 0m</div>
+            <div class="uptime-label">Uptime</div>
+          </div>
+          <div class="rate-display">
+            <div class="rate-item">
+              <div class="value" id="scansPerMin">0</div>
+              <div class="label">Scans/min</div>
+            </div>
+            <div class="rate-item">
+              <div class="value" id="blockRate">0%</div>
+              <div class="label">Block Rate</div>
+            </div>
+            <div class="rate-item">
+              <div class="value" id="errors">0</div>
+              <div class="label">Errors</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <footer>
+      <div>Clawback v<span id="version">0.2.0</span> • Zero-dependency security scanner for OpenClaw</div>
+      <div>
+        <a href="https://github.com/davidcjones79/clawback" target="_blank">GitHub</a>
+      </div>
+    </footer>
+  </div>
+  
+  <script>
+    // State
+    let eventSource = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    const recentThreats = [];
+    const riskBuckets = [0, 0, 0, 0, 0]; // 0-20, 21-40, 41-60, 61-80, 81-100
+    
+    // DOM Elements
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const totalScans = document.getElementById('totalScans');
+    const blocked = document.getElementById('blocked');
+    const flagged = document.getElementById('flagged');
+    const passed = document.getElementById('passed');
+    const threatList = document.getElementById('threatList');
+    const threatCount = document.getElementById('threatCount');
+    const categoryChart = document.getElementById('categoryChart');
+    const riskChart = document.getElementById('riskChart');
+    const uptime = document.getElementById('uptime');
+    const scansPerMin = document.getElementById('scansPerMin');
+    const blockRate = document.getElementById('blockRate');
+    const errors = document.getElementById('errors');
+    
+    // Connect to SSE
+    function connect() {
+      const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+      const url = `${protocol}//${window.location.host}/events`;
+      
+      eventSource = new EventSource(url);
+      
+      eventSource.onopen = () => {
+        statusDot.classList.remove('disconnected');
+        statusText.textContent = 'Live';
+        reconnectAttempts = 0;
+      };
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleEvent(data);
+        } catch (e) {
+          console.error('Failed to parse event:', e);
+        }
+      };
+      
+      eventSource.onerror = () => {
+        statusDot.classList.add('disconnected');
+        statusText.textContent = 'Disconnected';
+        eventSource.close();
+        
+        if (reconnectAttempts < maxReconnectAttempts) {
+          reconnectAttempts++;
+          setTimeout(connect, 2000 * reconnectAttempts);
+          statusText.textContent = `Reconnecting (${reconnectAttempts})...`;
+        } else {
+          statusText.textContent = 'Connection failed';
+        }
+      };
+    }
+    
+    // Handle incoming events
+    function handleEvent(data) {
+      if (data.type === 'stats') {
+        updateStats(data);
+      } else if (data.type === 'threat') {
+        addThreat(data.threat);
+      } else if (data.type === 'scan') {
+        updateRiskBuckets(data.riskScore);
+      }
+    }
+    
+    // Update stats display
+    function updateStats(data) {
+      totalScans.textContent = formatNumber(data.totalScans);
+      blocked.textContent = formatNumber(data.blocked);
+      flagged.textContent = formatNumber(data.flagged);
+      passed.textContent = formatNumber(data.passed);
+      errors.textContent = formatNumber(data.errors);
+      uptime.textContent = data.uptimeHuman || '0h 0m';
+      scansPerMin.textContent = data.scansPerMinute || '0';
+      blockRate.textContent = data.blockRate || '0%';
+      
+      updateCategoryChart(data.byCategory || {});
+    }
+    
+    // Add threat to list
+    function addThreat(threat) {
+      // Remove empty state
+      const emptyState = threatList.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+      
+      // Add to recent threats (max 50)
+      recentThreats.unshift(threat);
+      if (recentThreats.length > 50) recentThreats.pop();
+      
+      // Create threat element
+      const el = document.createElement('div');
+      el.className = 'threat-item';
+      el.innerHTML = `
+        <span class="severity-badge severity-${threat.severity}">${threat.severity}</span>
+        <div class="threat-details">
+          <div class="threat-name">${escapeHtml(threat.name)}</div>
+          <div class="threat-meta">
+            <span>${threat.category.replace(/_/g, ' ')}</span>
+            <span>${threat.id}</span>
+            <span>${formatTime(threat.timestamp)}</span>
+          </div>
+          ${threat.match ? `<div class="threat-match">"${escapeHtml(truncate(threat.match, 100))}"</div>` : ''}
+        </div>
+      `;
+      
+      // Insert at top
+      threatList.insertBefore(el, threatList.firstChild);
+      
+      // Keep only last 20 visible
+      while (threatList.children.length > 20) {
+        threatList.removeChild(threatList.lastChild);
+      }
+      
+      // Update count
+      threatCount.textContent = `${recentThreats.length} threat${recentThreats.length !== 1 ? 's' : ''}`;
+    }
+    
+    // Update category chart
+    function updateCategoryChart(categories) {
+      const entries = Object.entries(categories).sort((a, b) => b[1] - a[1]);
+      
+      if (entries.length === 0) return;
+      
+      const maxCount = Math.max(...entries.map(e => e[1]), 1);
+      
+      categoryChart.innerHTML = entries.slice(0, 8).map(([category, count]) => `
+        <div class="category-row">
+          <span class="category-label">${formatCategory(category)}</span>
+          <div class="category-bar-bg">
+            <div class="category-bar" style="width: ${(count / maxCount) * 100}%"></div>
+          </div>
+          <span class="category-count">${count}</span>
+        </div>
+      `).join('');
+    }
+    
+    // Update risk distribution
+    function updateRiskBuckets(score) {
+      const bucket = Math.min(Math.floor(score / 20), 4);
+      riskBuckets[bucket]++;
+      renderRiskChart();
+    }
+    
+    function renderRiskChart() {
+      const maxCount = Math.max(...riskBuckets, 1);
+      riskChart.innerHTML = riskBuckets.map((count, i) => {
+        const height = Math.max((count / maxCount) * 100, 2);
+        return `<div class="risk-bar" style="height: ${height}%" data-count="${count} scans"></div>`;
+      }).join('');
+    }
+    
+    // Utility functions
+    function formatNumber(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+      return n.toString();
+    }
+    
+    function formatCategory(cat) {
+      return cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+    
+    function formatTime(ts) {
+      if (!ts) return 'just now';
+      const diff = Date.now() - new Date(ts).getTime();
+      if (diff < 60000) return 'just now';
+      if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+      return Math.floor(diff / 86400000) + 'd ago';
+    }
+    
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+    
+    function truncate(str, len) {
+      return str.length > len ? str.slice(0, len) + '...' : str;
+    }
+    
+    // Initial fetch then connect to SSE
+    async function init() {
+      try {
+        const res = await fetch('/stats');
+        const data = await res.json();
+        updateStats(data);
+      } catch (e) {
+        console.error('Failed to fetch initial stats:', e);
+      }
+      
+      // Initialize risk chart
+      renderRiskChart();
+      
+      // Connect to SSE
+      connect();
+    }
+    
+    // Start
+    init();
+  </script>
+</body>
+</html>

@@ -16,6 +16,8 @@
  */
 
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { scanMessage } = require('./scanner');
 const { checkMessage } = require('./openclaw-hook');
 
@@ -47,10 +49,55 @@ const stats = {
   passed: 0,
   errors: 0,
   byCategory: {},
+  recentThreats: [],  // Last 100 threats
+  riskScores: [],     // Last 100 risk scores for distribution
 };
+
+// SSE clients
+const sseClients = new Set();
 
 // Rate limiting store
 const rateLimits = new Map();
+
+/**
+ * Broadcast event to all SSE clients
+ */
+function broadcast(event) {
+  const data = `data: ${JSON.stringify(event)}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(data);
+    } catch (e) {
+      sseClients.delete(client);
+    }
+  }
+}
+
+/**
+ * Record a threat and broadcast
+ */
+function recordThreat(threat, action) {
+  const threatRecord = {
+    ...threat,
+    action,
+    timestamp: new Date().toISOString(),
+  };
+  
+  stats.recentThreats.unshift(threatRecord);
+  if (stats.recentThreats.length > 100) stats.recentThreats.pop();
+  
+  broadcast({ type: 'threat', threat: threatRecord });
+}
+
+/**
+ * Record risk score for distribution
+ */
+function recordRiskScore(score) {
+  stats.riskScores.unshift(score);
+  if (stats.riskScores.length > 100) stats.riskScores.pop();
+  
+  broadcast({ type: 'scan', riskScore: score });
+}
 
 /**
  * Parse JSON body from request
@@ -214,10 +261,31 @@ async function handleScan(req, res, config) {
     else if (action === 'review') stats.flagged++;
     else stats.passed++;
     
-    // Track categories
+    // Track categories and record threats
     for (const threat of result.threats) {
       stats.byCategory[threat.category] = (stats.byCategory[threat.category] || 0) + 1;
+      recordThreat({
+        id: threat.signatureId,
+        name: threat.name,
+        category: threat.category,
+        severity: threat.severity,
+        match: threat.match,
+      }, action);
     }
+    
+    // Record risk score
+    recordRiskScore(result.riskScore);
+    
+    // Broadcast updated stats
+    broadcast({
+      type: 'stats',
+      totalScans: stats.totalScans,
+      blocked: stats.blocked,
+      flagged: stats.flagged,
+      passed: stats.passed,
+      errors: stats.errors,
+      byCategory: stats.byCategory,
+    });
     
     // Send alert if blocked or flagged
     if (action !== 'allow' && config.alertWebhook) {
@@ -344,6 +412,79 @@ function handleStats(req, res) {
     blockRate: stats.totalScans ? (stats.blocked / stats.totalScans * 100).toFixed(2) + '%' : '0%',
     scansPerMinute: rate.toFixed(2),
     byCategory: stats.byCategory,
+    recentThreats: stats.recentThreats.slice(0, 20),
+  });
+}
+
+/**
+ * Handle GET /dashboard - serve the monitoring UI
+ */
+function handleDashboard(req, res) {
+  const dashboardPath = path.join(__dirname, 'dashboard.html');
+  
+  try {
+    const html = fs.readFileSync(dashboardPath, 'utf8');
+    res.writeHead(200, {
+      'Content-Type': 'text/html',
+      'Cache-Control': 'no-cache',
+    });
+    res.end(html);
+  } catch (err) {
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end('Dashboard not found');
+  }
+}
+
+/**
+ * Handle GET /events - SSE stream for real-time updates
+ */
+function handleEvents(req, res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+  });
+  
+  // Send initial stats
+  const uptime = Math.floor((Date.now() - stats.startTime) / 1000);
+  const rate = stats.totalScans / Math.max(uptime, 1) * 60;
+  
+  res.write(`data: ${JSON.stringify({
+    type: 'stats',
+    totalScans: stats.totalScans,
+    blocked: stats.blocked,
+    flagged: stats.flagged,
+    passed: stats.passed,
+    errors: stats.errors,
+    uptimeHuman: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
+    scansPerMinute: rate.toFixed(2),
+    blockRate: stats.totalScans ? (stats.blocked / stats.totalScans * 100).toFixed(2) + '%' : '0%',
+    byCategory: stats.byCategory,
+  })}\n\n`);
+  
+  // Send recent threats
+  for (const threat of stats.recentThreats.slice(0, 20)) {
+    res.write(`data: ${JSON.stringify({ type: 'threat', threat })}\n\n`);
+  }
+  
+  // Add to SSE clients
+  sseClients.add(res);
+  
+  // Heartbeat every 30 seconds
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(':heartbeat\n\n');
+    } catch (e) {
+      clearInterval(heartbeat);
+      sseClients.delete(res);
+    }
+  }, 30000);
+  
+  // Cleanup on close
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    sseClients.delete(res);
   });
 }
 
@@ -383,6 +524,10 @@ function createRequestHandler(config) {
         handleHealth(req, res);
       } else if (req.method === 'GET' && url === '/stats') {
         handleStats(req, res);
+      } else if (req.method === 'GET' && url === '/dashboard') {
+        handleDashboard(req, res);
+      } else if (req.method === 'GET' && url === '/events') {
+        handleEvents(req, res);
       } else if (req.method === 'GET' && url === '/') {
         sendJSON(res, 200, {
           name: 'Clawback Security Scanner',
@@ -392,6 +537,8 @@ function createRequestHandler(config) {
             'POST /scan/batch': 'Scan multiple messages',
             'GET /health': 'Health check',
             'GET /stats': 'Scan statistics',
+            'GET /dashboard': 'Live monitoring dashboard',
+            'GET /events': 'SSE event stream',
           },
           docs: 'https://github.com/davidcjones79/clawback',
         });
@@ -420,11 +567,15 @@ function startServer(userConfig = {}) {
 
 Server running at http://${config.host}:${config.port}
 
+📊 Dashboard: http://${config.host}:${config.port}/dashboard
+
 Endpoints:
   POST /scan        Scan a message
   POST /scan/batch  Scan multiple messages
   GET  /health      Health check
   GET  /stats       Statistics
+  GET  /dashboard   Live monitoring UI
+  GET  /events      SSE event stream
 
 Configuration:
   Block threshold:  ${config.blockThreshold}

@@ -107,6 +107,35 @@ clawback serve \
   --alert-webhook https://your-webhook.com/alerts
 ```
 
+### Live Dashboard
+
+Open `http://localhost:3000/dashboard` for a real-time monitoring UI:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  🛡️ Clawback Monitor                            [Live] 🟢  │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
+│  │   1,247  │  │     12   │  │     43   │  │   1,192  │    │
+│  │  Total   │  │ Blocked  │  │  Review  │  │ Allowed  │    │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │
+├─────────────────────────────────────────────────────────────┤
+│  🚨 Recent Threats               │  📊 Threats by Category │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │  ━━━━━━━━━━━━━━━━━━━━━━ │
+│  🔴 CRIT  Instruction Override   │  ████████ Prompt Inj    │
+│  🟠 HIGH  Credential Harvest     │  █████░░░ Data Exfil    │
+│  🟡 MED   System Prompt Reveal   │  ██░░░░░░ Persistence   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Features:**
+- Real-time updates via Server-Sent Events (SSE)
+- Threat feed with severity badges and matched text
+- Category breakdown chart
+- Risk score distribution
+- Performance metrics (uptime, scans/min, block rate)
+- Zero dependencies — pure HTML/CSS/JS
+
 ### Endpoints
 
 | Endpoint | Method | Description |
@@ -115,6 +144,8 @@ clawback serve \
 | `/scan/batch` | POST | Scan multiple messages (max 100) |
 | `/health` | GET | Health check |
 | `/stats` | GET | Scan statistics |
+| `/dashboard` | GET | Live monitoring UI |
+| `/events` | GET | SSE event stream |
 
 ### Example Request
 
@@ -291,8 +322,8 @@ console.log(skillResult.summary);
 - [x] SARIF output (CI/CD integration)
 - [x] Real-time webhook server (message filtering)
 - [x] OpenClaw plugin integration
+- [x] Live monitoring dashboard (SSE real-time updates)
 - [ ] YARA rule support (native binary patterns)
-- [ ] Web dashboard for MSPs
 - [ ] Custom rule builder
 - [ ] LLM semantic analysis (optional)
 
