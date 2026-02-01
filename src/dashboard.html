@@ -3,140 +3,316 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clawback Security Monitor</title>
+  <title>CLAWBACK // Threat Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-primary: #0f1419;
-      --bg-secondary: #1a1f26;
-      --bg-card: #242b33;
-      --border: #2f3943;
-      --text-primary: #e7e9ea;
-      --text-secondary: #8b98a5;
-      --accent: #1d9bf0;
-      --success: #00ba7c;
-      --warning: #f7931a;
-      --danger: #f4212e;
-      --critical: #9c27b0;
+      --phosphor: #00ff41;
+      --phosphor-dim: #00cc33;
+      --phosphor-glow: rgba(0, 255, 65, 0.4);
+      --amber: #ffb000;
+      --amber-dim: #cc8c00;
+      --red-alert: #ff3333;
+      --red-glow: rgba(255, 51, 51, 0.5);
+      --critical: #ff00ff;
+      --bg-deep: #0a0a0c;
+      --bg-panel: #0d0f12;
+      --bg-card: #12151a;
+      --grid-line: rgba(0, 255, 65, 0.08);
+      --border-glow: rgba(0, 255, 65, 0.3);
+      --text-dim: #4a5568;
+      --scanline-opacity: 0.03;
+    }
+    
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100vh); }
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; filter: drop-shadow(0 0 8px var(--phosphor-glow)); }
+      50% { opacity: 0.7; filter: drop-shadow(0 0 4px var(--phosphor-glow)); }
+    }
+    
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0; }
+    }
+    
+    @keyframes threat-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 20px var(--red-glow); }
+      50% { transform: scale(1.02); box-shadow: 0 0 40px var(--red-glow); }
+    }
+    
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    @keyframes radar-sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      92% { opacity: 1; }
+      93% { opacity: 0.8; }
+      94% { opacity: 1; }
+      97% { opacity: 0.9; }
+      98% { opacity: 1; }
     }
     
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
+    html {
+      font-size: 14px;
+    }
+    
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-deep);
+      color: var(--phosphor);
       min-height: 100vh;
-      padding: 20px;
+      overflow-x: hidden;
+      position: relative;
+    }
+    
+    /* CRT Effects */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: 
+        repeating-linear-gradient(
+          0deg,
+          transparent 0px,
+          transparent 2px,
+          rgba(0, 0, 0, 0.1) 2px,
+          rgba(0, 0, 0, 0.1) 4px
+        );
+      pointer-events: none;
+      z-index: 1000;
+    }
+    
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 8px;
+      background: linear-gradient(180deg, rgba(0, 255, 65, 0.1) 0%, transparent 100%);
+      animation: scanline 8s linear infinite;
+      pointer-events: none;
+      z-index: 1001;
+    }
+    
+    /* Grid background */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
     }
     
     .container {
-      max-width: 1400px;
+      max-width: 1600px;
       margin: 0 auto;
+      padding: 24px;
+      position: relative;
+      z-index: 1;
     }
     
+    /* Header */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
+      padding: 20px 0 32px;
+      border-bottom: 1px solid var(--border-glow);
+      margin-bottom: 32px;
+      animation: flicker 10s infinite;
     }
     
     .logo {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 20px;
     }
     
-    .logo svg {
-      width: 40px;
-      height: 40px;
+    .logo-icon {
+      width: 56px;
+      height: 56px;
+      position: relative;
     }
     
-    .logo h1 {
-      font-size: 24px;
-      font-weight: 600;
+    .logo-icon svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 12px var(--phosphor-glow));
     }
     
-    .status-badge {
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .logo-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 6px;
+      text-shadow: 0 0 20px var(--phosphor-glow);
+    }
+    
+    .logo-subtitle {
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: var(--phosphor-dim);
+      margin-top: 2px;
+    }
+    
+    .status-cluster {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      background: var(--bg-card);
-      border-radius: 20px;
-      font-size: 14px;
+      gap: 24px;
+    }
+    
+    .system-time {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px;
+      color: var(--amber);
+      text-shadow: 0 0 10px var(--amber-dim);
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: rgba(0, 255, 65, 0.05);
+      border: 1px solid var(--border-glow);
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
     }
     
     .status-dot {
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
+      background: var(--phosphor);
       border-radius: 50%;
-      background: var(--success);
-      animation: pulse 2s infinite;
+      animation: pulse-glow 2s ease-in-out infinite;
     }
     
-    .status-dot.disconnected {
-      background: var(--danger);
-      animation: none;
+    .status-dot.offline {
+      background: var(--red-alert);
+      animation: blink 1s infinite;
     }
     
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+    .status-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      letter-spacing: 3px;
     }
     
-    /* Stats Cards */
+    /* Stats Grid */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
     }
     
     .stat-card {
       background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      text-align: center;
+      border: 1px solid var(--border-glow);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
     }
     
-    .stat-value {
-      font-size: 36px;
-      font-weight: 700;
-      margin-bottom: 4px;
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--phosphor), transparent);
+      opacity: 0.5;
     }
     
     .stat-label {
-      color: var(--text-secondary);
-      font-size: 14px;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
     
-    .stat-card.blocked .stat-value { color: var(--danger); }
-    .stat-card.review .stat-value { color: var(--warning); }
-    .stat-card.allowed .stat-value { color: var(--success); }
-    .stat-card.total .stat-value { color: var(--accent); }
+    .stat-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1;
+      text-shadow: 0 0 30px var(--phosphor-glow);
+    }
+    
+    .stat-card.blocked .stat-value { 
+      color: var(--red-alert); 
+      text-shadow: 0 0 30px var(--red-glow);
+    }
+    .stat-card.flagged .stat-value { 
+      color: var(--amber); 
+      text-shadow: 0 0 30px rgba(255, 176, 0, 0.5);
+    }
+    .stat-card.passed .stat-value { 
+      color: var(--phosphor); 
+    }
+    
+    .stat-delta {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 8px;
+    }
     
     /* Main Grid */
     .main-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1.2fr 1fr;
       gap: 24px;
     }
     
-    @media (max-width: 900px) {
+    @media (max-width: 1100px) {
       .main-grid { grid-template-columns: 1fr; }
     }
     
     .panel {
       background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      border: 1px solid var(--border-glow);
+      position: relative;
       overflow: hidden;
+    }
+    
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, rgba(0, 255, 65, 0.02) 0%, transparent 50%);
+      pointer-events: none;
     }
     
     .panel-header {
@@ -144,26 +320,49 @@
       align-items: center;
       justify-content: space-between;
       padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border-glow);
+      background: rgba(0, 255, 65, 0.03);
     }
     
     .panel-title {
-      font-size: 16px;
-      font-weight: 600;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .panel-title::before {
+      content: '▸';
+      color: var(--phosphor);
     }
     
     .panel-badge {
-      font-size: 12px;
-      color: var(--text-secondary);
-      padding: 4px 8px;
-      background: var(--bg-secondary);
-      border-radius: 4px;
+      font-size: 11px;
+      padding: 4px 12px;
+      background: rgba(0, 255, 65, 0.1);
+      border: 1px solid var(--border-glow);
+      letter-spacing: 1px;
     }
     
     .panel-body {
       padding: 20px;
-      max-height: 400px;
+      max-height: 420px;
       overflow-y: auto;
+    }
+    
+    .panel-body::-webkit-scrollbar {
+      width: 4px;
+    }
+    
+    .panel-body::-webkit-scrollbar-track {
+      background: var(--bg-deep);
+    }
+    
+    .panel-body::-webkit-scrollbar-thumb {
+      background: var(--phosphor-dim);
     }
     
     /* Threat List */
@@ -176,101 +375,234 @@
     .threat-item {
       display: flex;
       align-items: flex-start;
-      gap: 12px;
-      padding: 12px;
-      background: var(--bg-secondary);
-      border-radius: 8px;
-      animation: slideIn 0.3s ease;
+      gap: 16px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-left: 3px solid var(--phosphor);
+      animation: slide-in 0.4s ease-out;
+      position: relative;
     }
     
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(-10px); }
-      to { opacity: 1; transform: translateX(0); }
+    .threat-item.critical {
+      border-left-color: var(--critical);
+      background: rgba(255, 0, 255, 0.05);
     }
     
-    .severity-badge {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
+    .threat-item.high {
+      border-left-color: var(--red-alert);
+      background: rgba(255, 51, 51, 0.05);
+    }
+    
+    .threat-item.medium {
+      border-left-color: var(--amber);
+      background: rgba(255, 176, 0, 0.05);
+    }
+    
+    .severity-tag {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      padding: 4px 10px;
       text-transform: uppercase;
-      white-space: nowrap;
+      min-width: 70px;
+      text-align: center;
     }
     
-    .severity-critical { background: var(--critical); color: white; }
-    .severity-high { background: var(--danger); color: white; }
-    .severity-medium { background: var(--warning); color: black; }
-    .severity-low { background: var(--text-secondary); color: var(--bg-primary); }
+    .severity-tag.critical { 
+      background: var(--critical); 
+      color: #000;
+      animation: threat-pulse 2s infinite;
+    }
+    .severity-tag.high { 
+      background: var(--red-alert); 
+      color: #000;
+    }
+    .severity-tag.medium { 
+      background: var(--amber); 
+      color: #000;
+    }
+    .severity-tag.low { 
+      background: var(--text-dim); 
+      color: #000;
+    }
     
-    .threat-details {
+    .threat-content {
       flex: 1;
       min-width: 0;
     }
     
     .threat-name {
       font-weight: 500;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      color: #fff;
     }
     
     .threat-meta {
       display: flex;
+      flex-wrap: wrap;
       gap: 16px;
-      font-size: 12px;
-      color: var(--text-secondary);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    
+    .threat-meta span::before {
+      content: '//';
+      margin-right: 6px;
+      color: var(--phosphor-dim);
     }
     
     .threat-match {
-      font-size: 12px;
-      color: var(--text-secondary);
-      font-family: monospace;
-      background: var(--bg-primary);
-      padding: 4px 8px;
-      border-radius: 4px;
-      margin-top: 8px;
+      font-size: 11px;
+      color: var(--amber);
+      background: rgba(255, 176, 0, 0.1);
+      padding: 8px 12px;
+      margin-top: 10px;
+      border-left: 2px solid var(--amber);
       word-break: break-all;
     }
     
     /* Category Chart */
-    .category-chart {
+    .category-list {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
     }
     
-    .category-row {
+    .category-item {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
     }
     
     .category-label {
       width: 140px;
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--phosphor-dim);
+      text-transform: uppercase;
     }
     
-    .category-bar-bg {
+    .category-bar-container {
       flex: 1;
       height: 24px;
-      background: var(--bg-secondary);
-      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.4);
+      position: relative;
       overflow: hidden;
     }
     
     .category-bar {
       height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--warning));
-      border-radius: 4px;
-      transition: width 0.5s ease;
+      background: linear-gradient(90deg, var(--phosphor-dim), var(--phosphor));
+      position: relative;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .category-bar::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 20px;
+      background: linear-gradient(90deg, transparent, var(--phosphor));
+      opacity: 0.8;
     }
     
     .category-count {
       width: 50px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
       text-align: right;
-      font-size: 13px;
-      color: var(--text-secondary);
+    }
+    
+    /* Radar Panel */
+    .radar-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    
+    .radar {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: 2px solid var(--phosphor-dim);
+      position: relative;
+      background: 
+        radial-gradient(circle, transparent 0%, var(--bg-deep) 70%),
+        repeating-radial-gradient(
+          circle at center,
+          transparent 0px,
+          transparent 20px,
+          var(--grid-line) 20px,
+          var(--grid-line) 21px
+        );
+    }
+    
+    .radar::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 50%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--phosphor), transparent);
+      transform-origin: left center;
+      animation: radar-sweep 4s linear infinite;
+    }
+    
+    .radar::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 8px;
+      background: var(--phosphor);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 20px var(--phosphor);
+    }
+    
+    .radar-blip {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: var(--red-alert);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--red-alert);
+      animation: pulse-glow 1s ease-in-out infinite;
+    }
+    
+    /* Performance Stats */
+    .perf-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      padding: 20px;
+    }
+    
+    .perf-item {
+      text-align: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--grid-line);
+    }
+    
+    .perf-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    
+    .perf-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      text-transform: uppercase;
     }
     
     /* Risk Distribution */
@@ -278,219 +610,202 @@
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
-      height: 120px;
-      padding-top: 20px;
+      height: 100px;
+      gap: 8px;
+      padding: 0 10px;
     }
     
     .risk-bar {
       flex: 1;
-      max-width: 40px;
-      background: var(--accent);
-      border-radius: 4px 4px 0 0;
-      transition: height 0.5s ease;
+      background: linear-gradient(180deg, var(--phosphor), var(--phosphor-dim));
+      min-height: 4px;
       position: relative;
+      transition: height 0.5s ease;
     }
     
-    .risk-bar:hover::after {
+    .risk-bar::before {
       content: attr(data-count);
       position: absolute;
       bottom: 100%;
       left: 50%;
       transform: translateX(-50%);
-      padding: 4px 8px;
-      background: var(--bg-primary);
-      border-radius: 4px;
-      font-size: 12px;
-      white-space: nowrap;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      padding: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    
+    .risk-bar:hover::before {
+      opacity: 1;
     }
     
     .risk-labels {
       display: flex;
       justify-content: space-between;
-      margin-top: 8px;
-      font-size: 11px;
-      color: var(--text-secondary);
+      padding: 10px;
+      font-size: 10px;
+      color: var(--text-dim);
+      border-top: 1px solid var(--grid-line);
     }
     
-    /* Uptime */
-    .uptime {
-      text-align: center;
-      padding: 20px;
-    }
-    
-    .uptime-value {
-      font-size: 28px;
-      font-weight: 600;
-      color: var(--accent);
-    }
-    
-    .uptime-label {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-    
-    /* Rate */
-    .rate-display {
-      display: flex;
-      justify-content: space-around;
-      padding: 20px;
-      text-align: center;
-    }
-    
-    .rate-item .value {
-      font-size: 24px;
-      font-weight: 600;
-    }
-    
-    .rate-item .label {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-    
-    /* Empty state */
+    /* Empty State */
     .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: var(--text-dim);
     }
     
-    .empty-state svg {
-      width: 48px;
-      height: 48px;
-      margin-bottom: 12px;
-      opacity: 0.5;
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+    
+    .empty-text {
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
     
     /* Footer */
     footer {
-      margin-top: 24px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
+      margin-top: 32px;
+      padding: 20px 0;
+      border-top: 1px solid var(--grid-line);
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
-      color: var(--text-secondary);
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-dim);
     }
     
     footer a {
-      color: var(--accent);
+      color: var(--phosphor-dim);
       text-decoration: none;
+      letter-spacing: 2px;
+      transition: color 0.2s, text-shadow 0.2s;
     }
     
     footer a:hover {
-      text-decoration: underline;
+      color: var(--phosphor);
+      text-shadow: 0 0 10px var(--phosphor-glow);
+    }
+    
+    /* Side panels */
+    .side-panels {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
     }
   </style>
 </head>
 <body>
+  <div class="grid-bg"></div>
+  
   <div class="container">
     <header>
       <div class="logo">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="45" stroke="#1d9bf0" stroke-width="4" fill="none"/>
-          <path d="M30 50 L45 65 L70 35" stroke="#00ba7c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
-        <h1>Clawback Monitor</h1>
+        <div class="logo-icon">
+          <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+            <circle cx="50" cy="50" r="35" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+            <circle cx="50" cy="50" r="25" stroke="currentColor" stroke-width="1" opacity="0.1"/>
+            <path d="M25 50 L40 65 L75 30" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <div class="logo-title">CLAWBACK</div>
+          <div class="logo-subtitle">THREAT DETECTION SYSTEM</div>
+        </div>
       </div>
-      <div class="status-badge">
-        <div class="status-dot" id="statusDot"></div>
-        <span id="statusText">Connecting...</span>
+      
+      <div class="status-cluster">
+        <div class="system-time" id="systemTime">--:--:--</div>
+        <div class="status-indicator">
+          <div class="status-dot" id="statusDot"></div>
+          <span class="status-text" id="statusText">CONNECTING</span>
+        </div>
       </div>
     </header>
     
     <div class="stats-grid">
-      <div class="stat-card total">
+      <div class="stat-card">
+        <div class="stat-label">TOTAL SCANS</div>
         <div class="stat-value" id="totalScans">0</div>
-        <div class="stat-label">Total Scans</div>
+        <div class="stat-delta" id="scanRate">0 /min</div>
       </div>
       <div class="stat-card blocked">
+        <div class="stat-label">BLOCKED</div>
         <div class="stat-value" id="blocked">0</div>
-        <div class="stat-label">Blocked</div>
       </div>
-      <div class="stat-card review">
+      <div class="stat-card flagged">
+        <div class="stat-label">FLAGGED</div>
         <div class="stat-value" id="flagged">0</div>
-        <div class="stat-label">Flagged</div>
       </div>
-      <div class="stat-card allowed">
+      <div class="stat-card passed">
+        <div class="stat-label">CLEARED</div>
         <div class="stat-value" id="passed">0</div>
-        <div class="stat-label">Allowed</div>
       </div>
     </div>
     
     <div class="main-grid">
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">🚨 Recent Threats</span>
-          <span class="panel-badge" id="threatCount">0 threats</span>
+          <span class="panel-title">THREAT INTERCEPTS</span>
+          <span class="panel-badge" id="threatCount">0 DETECTED</span>
         </div>
         <div class="panel-body">
           <div class="threat-list" id="threatList">
             <div class="empty-state">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6l4 2"/>
               </svg>
-              <div>No threats detected yet</div>
-              <div style="margin-top: 4px; font-size: 12px;">Threats will appear here in real-time</div>
+              <div class="empty-text">AWAITING SCAN DATA</div>
             </div>
           </div>
         </div>
       </div>
       
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">📊 Threats by Category</span>
-        </div>
-        <div class="panel-body">
-          <div class="category-chart" id="categoryChart">
-            <div class="empty-state">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              </svg>
-              <div>No category data yet</div>
+      <div class="side-panels">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">THREAT CATEGORIES</span>
+          </div>
+          <div class="panel-body">
+            <div class="category-list" id="categoryList">
+              <div class="empty-state" style="padding: 40px 20px;">
+                <div class="empty-text">NO CATEGORY DATA</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">📈 Risk Score Distribution</span>
-        </div>
-        <div class="panel-body">
-          <div class="risk-chart" id="riskChart"></div>
-          <div class="risk-labels">
-            <span>0</span>
-            <span>25</span>
-            <span>50</span>
-            <span>75</span>
-            <span>100</span>
+        
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">SYSTEM STATUS</span>
           </div>
-        </div>
-      </div>
-      
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">⚡ Performance</span>
-        </div>
-        <div class="panel-body" style="padding: 0;">
-          <div class="uptime">
-            <div class="uptime-value" id="uptime">0h 0m</div>
-            <div class="uptime-label">Uptime</div>
-          </div>
-          <div class="rate-display">
-            <div class="rate-item">
-              <div class="value" id="scansPerMin">0</div>
-              <div class="label">Scans/min</div>
+          <div class="perf-grid">
+            <div class="perf-item">
+              <div class="perf-value" id="uptime">0:00</div>
+              <div class="perf-label">UPTIME</div>
             </div>
-            <div class="rate-item">
-              <div class="value" id="blockRate">0%</div>
-              <div class="label">Block Rate</div>
+            <div class="perf-item">
+              <div class="perf-value" id="blockRate">0%</div>
+              <div class="perf-label">BLOCK RATE</div>
             </div>
-            <div class="rate-item">
-              <div class="value" id="errors">0</div>
-              <div class="label">Errors</div>
+            <div class="perf-item">
+              <div class="perf-value" id="scansPerMin">0</div>
+              <div class="perf-label">SCANS/MIN</div>
+            </div>
+            <div class="perf-item">
+              <div class="perf-value" id="errors">0</div>
+              <div class="perf-label">ERRORS</div>
             </div>
           </div>
         </div>
@@ -498,10 +813,8 @@
     </div>
     
     <footer>
-      <div>Clawback v<span id="version">0.2.0</span> • Zero-dependency security scanner for OpenClaw</div>
-      <div>
-        <a href="https://github.com/davidcjones79/clawback" target="_blank">GitHub</a>
-      </div>
+      <div>CLAWBACK v<span id="version">0.2.0</span> // ZERO-DEP SECURITY SCANNER</div>
+      <a href="https://github.com/davidcjones79/clawback" target="_blank">[ GITHUB ]</a>
     </footer>
   </div>
   
@@ -511,23 +824,31 @@
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
     const recentThreats = [];
-    const riskBuckets = [0, 0, 0, 0, 0]; // 0-20, 21-40, 41-60, 61-80, 81-100
     
     // DOM Elements
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
+    const systemTime = document.getElementById('systemTime');
     const totalScans = document.getElementById('totalScans');
     const blocked = document.getElementById('blocked');
     const flagged = document.getElementById('flagged');
     const passed = document.getElementById('passed');
+    const scanRate = document.getElementById('scanRate');
     const threatList = document.getElementById('threatList');
     const threatCount = document.getElementById('threatCount');
-    const categoryChart = document.getElementById('categoryChart');
-    const riskChart = document.getElementById('riskChart');
+    const categoryList = document.getElementById('categoryList');
     const uptime = document.getElementById('uptime');
     const scansPerMin = document.getElementById('scansPerMin');
     const blockRate = document.getElementById('blockRate');
     const errors = document.getElementById('errors');
+    
+    // Update clock
+    function updateClock() {
+      const now = new Date();
+      systemTime.textContent = now.toTimeString().split(' ')[0];
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
     
     // Connect to SSE
     function connect() {
@@ -537,8 +858,8 @@
       eventSource = new EventSource(url);
       
       eventSource.onopen = () => {
-        statusDot.classList.remove('disconnected');
-        statusText.textContent = 'Live';
+        statusDot.classList.remove('offline');
+        statusText.textContent = 'ONLINE';
         reconnectAttempts = 0;
       };
       
@@ -547,100 +868,93 @@
           const data = JSON.parse(event.data);
           handleEvent(data);
         } catch (e) {
-          console.error('Failed to parse event:', e);
+          console.error('Parse error:', e);
         }
       };
       
       eventSource.onerror = () => {
-        statusDot.classList.add('disconnected');
-        statusText.textContent = 'Disconnected';
+        statusDot.classList.add('offline');
+        statusText.textContent = 'OFFLINE';
         eventSource.close();
         
         if (reconnectAttempts < maxReconnectAttempts) {
           reconnectAttempts++;
           setTimeout(connect, 2000 * reconnectAttempts);
-          statusText.textContent = `Reconnecting (${reconnectAttempts})...`;
+          statusText.textContent = `RETRY ${reconnectAttempts}`;
         } else {
-          statusText.textContent = 'Connection failed';
+          statusText.textContent = 'FAILED';
         }
       };
     }
     
-    // Handle incoming events
+    // Handle events
     function handleEvent(data) {
       if (data.type === 'stats') {
         updateStats(data);
       } else if (data.type === 'threat') {
         addThreat(data.threat);
-      } else if (data.type === 'scan') {
-        updateRiskBuckets(data.riskScore);
       }
     }
     
-    // Update stats display
+    // Update stats
     function updateStats(data) {
       totalScans.textContent = formatNumber(data.totalScans);
       blocked.textContent = formatNumber(data.blocked);
       flagged.textContent = formatNumber(data.flagged);
       passed.textContent = formatNumber(data.passed);
       errors.textContent = formatNumber(data.errors);
-      uptime.textContent = data.uptimeHuman || '0h 0m';
-      scansPerMin.textContent = data.scansPerMinute || '0';
+      uptime.textContent = data.uptimeHuman || '0:00';
+      scansPerMin.textContent = parseFloat(data.scansPerMinute || 0).toFixed(1);
       blockRate.textContent = data.blockRate || '0%';
+      scanRate.textContent = `${parseFloat(data.scansPerMinute || 0).toFixed(1)} /min`;
       
-      updateCategoryChart(data.byCategory || {});
+      updateCategories(data.byCategory || {});
     }
     
-    // Add threat to list
+    // Add threat
     function addThreat(threat) {
-      // Remove empty state
       const emptyState = threatList.querySelector('.empty-state');
       if (emptyState) emptyState.remove();
       
-      // Add to recent threats (max 50)
       recentThreats.unshift(threat);
       if (recentThreats.length > 50) recentThreats.pop();
       
-      // Create threat element
       const el = document.createElement('div');
-      el.className = 'threat-item';
+      el.className = `threat-item ${threat.severity}`;
       el.innerHTML = `
-        <span class="severity-badge severity-${threat.severity}">${threat.severity}</span>
-        <div class="threat-details">
+        <span class="severity-tag ${threat.severity}">${threat.severity}</span>
+        <div class="threat-content">
           <div class="threat-name">${escapeHtml(threat.name)}</div>
           <div class="threat-meta">
-            <span>${threat.category.replace(/_/g, ' ')}</span>
+            <span>${formatCategory(threat.category)}</span>
             <span>${threat.id}</span>
             <span>${formatTime(threat.timestamp)}</span>
           </div>
-          ${threat.match ? `<div class="threat-match">"${escapeHtml(truncate(threat.match, 100))}"</div>` : ''}
+          ${threat.match ? `<div class="threat-match">${escapeHtml(truncate(threat.match, 120))}</div>` : ''}
         </div>
       `;
       
-      // Insert at top
       threatList.insertBefore(el, threatList.firstChild);
       
-      // Keep only last 20 visible
-      while (threatList.children.length > 20) {
+      while (threatList.children.length > 25) {
         threatList.removeChild(threatList.lastChild);
       }
       
-      // Update count
-      threatCount.textContent = `${recentThreats.length} threat${recentThreats.length !== 1 ? 's' : ''}`;
+      threatCount.textContent = `${recentThreats.length} DETECTED`;
     }
     
-    // Update category chart
-    function updateCategoryChart(categories) {
+    // Update categories
+    function updateCategories(categories) {
       const entries = Object.entries(categories).sort((a, b) => b[1] - a[1]);
       
       if (entries.length === 0) return;
       
       const maxCount = Math.max(...entries.map(e => e[1]), 1);
       
-      categoryChart.innerHTML = entries.slice(0, 8).map(([category, count]) => `
-        <div class="category-row">
+      categoryList.innerHTML = entries.slice(0, 6).map(([category, count]) => `
+        <div class="category-item">
           <span class="category-label">${formatCategory(category)}</span>
-          <div class="category-bar-bg">
+          <div class="category-bar-container">
             <div class="category-bar" style="width: ${(count / maxCount) * 100}%"></div>
           </div>
           <span class="category-count">${count}</span>
@@ -648,22 +962,7 @@
       `).join('');
     }
     
-    // Update risk distribution
-    function updateRiskBuckets(score) {
-      const bucket = Math.min(Math.floor(score / 20), 4);
-      riskBuckets[bucket]++;
-      renderRiskChart();
-    }
-    
-    function renderRiskChart() {
-      const maxCount = Math.max(...riskBuckets, 1);
-      riskChart.innerHTML = riskBuckets.map((count, i) => {
-        const height = Math.max((count / maxCount) * 100, 2);
-        return `<div class="risk-bar" style="height: ${height}%" data-count="${count} scans"></div>`;
-      }).join('');
-    }
-    
-    // Utility functions
+    // Utilities
     function formatNumber(n) {
       if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
       if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
@@ -671,16 +970,16 @@
     }
     
     function formatCategory(cat) {
-      return cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      return cat.replace(/_/g, ' ').toUpperCase();
     }
     
     function formatTime(ts) {
-      if (!ts) return 'just now';
+      if (!ts) return 'NOW';
       const diff = Date.now() - new Date(ts).getTime();
-      if (diff < 60000) return 'just now';
-      if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
-      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
-      return Math.floor(diff / 86400000) + 'd ago';
+      if (diff < 60000) return 'NOW';
+      if (diff < 3600000) return Math.floor(diff / 60000) + 'M AGO';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + 'H AGO';
+      return Math.floor(diff / 86400000) + 'D AGO';
     }
     
     function escapeHtml(str) {
@@ -693,24 +992,18 @@
       return str.length > len ? str.slice(0, len) + '...' : str;
     }
     
-    // Initial fetch then connect to SSE
+    // Init
     async function init() {
       try {
         const res = await fetch('/stats');
         const data = await res.json();
         updateStats(data);
       } catch (e) {
-        console.error('Failed to fetch initial stats:', e);
+        console.error('Initial fetch failed:', e);
       }
-      
-      // Initialize risk chart
-      renderRiskChart();
-      
-      // Connect to SSE
       connect();
     }
     
-    // Start
     init();
   </script>
 </body>
