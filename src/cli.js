@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ClawGuard CLI
+ * Clawback CLI
  * Security scanner for OpenClaw instances
  */
 
@@ -12,10 +12,10 @@ const VERSION = '0.1.0';
 
 function printUsage() {
   console.log(`
-ClawGuard v${VERSION} - Security scanner for OpenClaw
+Clawback v${VERSION} - Security scanner for OpenClaw
 
 USAGE:
-  clawguard <command> [options]
+  clawback <command> [options]
 
 COMMANDS:
   check <message>      Scan a message for prompt injection
@@ -30,10 +30,10 @@ OPTIONS:
   --verbose                         Show detailed output
 
 EXAMPLES:
-  clawguard check "ignore previous instructions"
-  clawguard scan ~/.openclaw
-  clawguard audit ~/.openclaw/config.yaml
-  clawguard signatures --json
+  clawback check "ignore previous instructions"
+  clawback scan ~/.openclaw
+  clawback audit ~/.openclaw/config.yaml
+  clawback signatures --json
 `);
 }
 
@@ -76,14 +76,14 @@ function main() {
     case 'version':
     case '--version':
     case '-v':
-      console.log(`ClawGuard v${VERSION}`);
+      console.log(`Clawback v${VERSION}`);
       break;
       
     case 'check': {
       const message = args.slice(1).filter(a => !a.startsWith('--')).join(' ');
       if (!message) {
         console.error('Error: No message provided');
-        console.error('Usage: clawguard check "your message here"');
+        console.error('Usage: clawback check "your message here"');
         process.exit(1);
       }
       
@@ -155,7 +155,7 @@ function main() {
       const configPath = args[1];
       if (!configPath) {
         console.error('Error: No config file specified');
-        console.error('Usage: clawguard audit <config-file>');
+        console.error('Usage: clawback audit <config-file>');
         process.exit(1);
       }
       
@@ -206,7 +206,7 @@ function main() {
       if (flags.json) {
         console.log(JSON.stringify(signatures, null, 2));
       } else {
-        console.log(`ClawGuard Threat Signatures (${signatures.length} total)\n`);
+        console.log(`Clawback Threat Signatures (${signatures.length} total)\n`);
         
         const byCategory = {};
         for (const sig of signatures) {

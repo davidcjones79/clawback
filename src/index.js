@@ -1,5 +1,5 @@
 /**
- * ClawGuard
+ * Clawback
  * Security scanner and threat detection for OpenClaw
  */
 

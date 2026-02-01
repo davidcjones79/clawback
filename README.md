@@ -1,12 +1,12 @@
-# ClawGuard 🛡️
+# Clawback 🛡️
 
 Security scanner and threat detection for [OpenClaw](https://github.com/openclaw/openclaw) AI assistant instances.
 
 > ⚠️ **Early Development** — This project is in active development. Contributions welcome!
 
-## What is ClawGuard?
+## What is Clawback?
 
-ClawGuard is an open-source security toolkit designed to help individuals and MSPs protect their OpenClaw deployments. It complements OpenClaw's built-in `openclaw security audit` command with additional threat detection capabilities.
+Clawback is an open-source security toolkit designed to help individuals and MSPs protect their OpenClaw deployments. It complements OpenClaw's built-in `openclaw security audit` command with additional threat detection capabilities.
 
 ## Features
 
@@ -20,22 +20,22 @@ ClawGuard is an open-source security toolkit designed to help individuals and MS
 
 ```bash
 # Clone the repo
-git clone https://github.com/davidcjones79/clawguard.git
-cd clawguard
+git clone https://github.com/davidcjones79/clawback.git
+cd clawback
 
 # Install dependencies
 npm install
 
 # Run a security scan
-npx clawguard scan ~/.openclaw
+npx clawback scan ~/.openclaw
 
 # Check for prompt injection in a message
-npx clawguard check "Your message here"
+npx clawback check "Your message here"
 ```
 
 ## Threat Signatures
 
-ClawGuard includes detection for:
+Clawback includes detection for:
 
 | Category | Examples |
 |----------|----------|
@@ -47,7 +47,7 @@ ClawGuard includes detection for:
 
 ## Configuration
 
-Create `clawguard.config.json` in your OpenClaw workspace:
+Create `clawback.config.json` in your OpenClaw workspace:
 
 ```json
 {
@@ -71,9 +71,9 @@ Create `clawguard.config.json` in your OpenClaw workspace:
 
 ## Complementing OpenClaw Security
 
-ClawGuard is designed to work alongside OpenClaw's built-in security features:
+Clawback is designed to work alongside OpenClaw's built-in security features:
 
-| OpenClaw Built-in | ClawGuard Adds |
+| OpenClaw Built-in | Clawback Adds |
 |-------------------|----------------|
 | `openclaw security audit` | Additional prompt injection detection |
 | Config validation | Runtime behavior monitoring |
@@ -90,7 +90,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ## Disclaimer
 
-ClawGuard is a security tool but cannot guarantee complete protection. Always follow security best practices and keep your OpenClaw installation updated.
+Clawback is a security tool but cannot guarantee complete protection. Always follow security best practices and keep your OpenClaw installation updated.
 
 ---
 
