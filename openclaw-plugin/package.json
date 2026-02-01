@@ -1,0 +1,29 @@
+{
+  "name": "@clawback/openclaw-plugin",
+  "version": "0.2.0",
+  "description": "Clawback security scanner plugin for OpenClaw",
+  "main": "index.ts",
+  "author": "David Jones <david@sonomait.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davidcjones79/clawback.git",
+    "directory": "openclaw-plugin"
+  },
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "security",
+    "prompt-injection",
+    "ai-safety"
+  ],
+  "openclaw": {
+    "extensions": ["./index.ts"]
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.1.0"
+  }
+}

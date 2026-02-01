@@ -153,6 +153,55 @@ curl -X POST http://localhost:3000/scan \
 | `review` | Flag for human review (high severity) |
 | `block` | Auto-reject message (critical severity) |
 
+## OpenClaw Plugin
+
+Native integration that scans messages before they reach the AI agent.
+
+### Install
+
+```bash
+# From clawback repo
+openclaw plugins install /path/to/clawback/openclaw-plugin
+
+# Or link for development
+openclaw plugins install -l /path/to/clawback/openclaw-plugin
+```
+
+### Configure
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "clawback": {
+        "enabled": true,
+        "config": {
+          "mode": "review",
+          "sensitivity": "medium",
+          "alertOwner": true
+        }
+      }
+    }
+  }
+}
+```
+
+### Modes
+
+| Mode | Behavior |
+|------|----------|
+| `monitor` | Log only (default) |
+| `review` | Flag high-severity, alert owner |
+| `block` | Auto-reject critical threats |
+
+### CLI
+
+```bash
+openclaw clawback status      # Stats and config
+openclaw clawback check "msg" # Test scan
+openclaw clawback signatures  # List signatures
+```
+
 ## Config Audit Checks
 
 Clawback audits OpenClaw configs for:
@@ -241,7 +290,7 @@ console.log(skillResult.summary);
 - [x] Behavioral analysis (dataflow patterns)
 - [x] SARIF output (CI/CD integration)
 - [x] Real-time webhook server (message filtering)
-- [ ] OpenClaw plugin integration
+- [x] OpenClaw plugin integration
 - [ ] YARA rule support (native binary patterns)
 - [ ] Web dashboard for MSPs
 - [ ] Custom rule builder

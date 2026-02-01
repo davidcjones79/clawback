@@ -1,0 +1,62 @@
+{
+  "id": "clawback",
+  "name": "Clawback Security Scanner",
+  "version": "0.2.0",
+  "description": "Real-time prompt injection detection and message security scanning for OpenClaw",
+  "homepage": "https://github.com/davidcjones79/clawback",
+  "author": "David Jones <david@sonomait.com>",
+  "license": "MIT",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable/disable message scanning"
+      },
+      "mode": {
+        "type": "string",
+        "enum": ["monitor", "review", "block"],
+        "default": "monitor",
+        "description": "Scanning mode: monitor (log only), review (flag high severity), block (reject critical)"
+      },
+      "sensitivity": {
+        "type": "string",
+        "enum": ["low", "medium", "high"],
+        "default": "medium",
+        "description": "Detection sensitivity level"
+      },
+      "blockThreshold": {
+        "type": "string",
+        "enum": ["low", "medium", "high", "critical"],
+        "default": "critical",
+        "description": "Severity threshold for auto-blocking (block mode)"
+      },
+      "alertOwner": {
+        "type": "boolean",
+        "default": true,
+        "description": "Send alerts to owner when threats detected"
+      },
+      "logPath": {
+        "type": "string",
+        "description": "Path to security audit log (optional)"
+      },
+      "allowlist": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": [],
+        "description": "Signature IDs to ignore"
+      }
+    }
+  },
+  "uiHints": {
+    "enabled": { "label": "Enable Clawback", "description": "Scan incoming messages for security threats" },
+    "mode": { "label": "Scanning Mode", "description": "monitor = log only, review = flag for review, block = reject threats" },
+    "sensitivity": { "label": "Sensitivity", "description": "Higher sensitivity catches more but may have false positives" },
+    "blockThreshold": { "label": "Block Threshold", "description": "Minimum severity to auto-block messages (in block mode)" },
+    "alertOwner": { "label": "Alert Owner", "description": "Notify you when threats are detected" },
+    "logPath": { "label": "Audit Log Path", "description": "File path for security audit logs" },
+    "allowlist": { "label": "Allowlist", "description": "Signature IDs to skip (e.g., PROMPT-001)" }
+  }
+}
