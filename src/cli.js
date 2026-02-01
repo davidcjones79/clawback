@@ -178,6 +178,12 @@ function main() {
     flags.sensitivity = args[sensitivityIdx + 1];
   }
   
+  // Build set of args to exclude (flags and their values)
+  const excludeArgs = new Set(['--json', '--verbose', '--sarif', '--sensitivity']);
+  if (sensitivityIdx !== -1) {
+    excludeArgs.add(args[sensitivityIdx + 1]); // Also exclude sensitivity value
+  }
+  
   switch (command) {
     case 'version':
     case '--version':
@@ -188,7 +194,7 @@ function main() {
       break;
       
     case 'check': {
-      const message = args.slice(1).filter(a => !a.startsWith('--')).join(' ');
+      const message = args.slice(1).filter(a => !a.startsWith('--') && !excludeArgs.has(a)).join(' ');
       if (!message) {
         console.error('Error: No message provided');
         console.error('Usage: clawback check "your message here"');

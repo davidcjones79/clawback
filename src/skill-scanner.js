@@ -15,6 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const { signatures } = require('./signatures');
+const { calculateRiskScore, getLineNumber } = require('./utils');
 
 /**
  * Parse SKILL.md frontmatter (YAML between --- delimiters)
@@ -150,7 +151,9 @@ function scanPythonFile(content, filePath) {
     
     for (const pattern of sig.patterns) {
       let match;
-      const regex = new RegExp(pattern.source, pattern.flags + 'g');
+      // Ensure 'g' flag is set without duplication
+      const flags = pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g';
+      const regex = new RegExp(pattern.source, flags);
       
       while ((match = regex.exec(content)) !== null) {
         // Check exclusions
@@ -420,34 +423,6 @@ function scanSkillDirectory(skillPath) {
   results.riskScore = calculateRiskScore(results.threats);
   
   return results;
-}
-
-/**
- * Calculate risk score from threats
- */
-function calculateRiskScore(threats) {
-  if (threats.length === 0) return 0;
-  
-  const severityScores = {
-    critical: 40,
-    high: 25,
-    medium: 15,
-    low: 5,
-  };
-  
-  let score = 0;
-  for (const threat of threats) {
-    score += severityScores[threat.severity] || 10;
-  }
-  
-  return Math.min(100, score);
-}
-
-/**
- * Get line number from character index
- */
-function getLineNumber(content, index) {
-  return content.slice(0, index).split('\n').length;
 }
 
 module.exports = {

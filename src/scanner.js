@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const { signatures } = require('./signatures');
 const { scanSkillDirectory, scanSkillMd, scanPythonFile } = require('./skill-scanner');
+const { calculateRiskScore, parseSimpleYaml } = require('./utils');
 
 /**
  * Scan a message for prompt injection attempts
@@ -55,6 +56,7 @@ function scanMessage(message, options = {}) {
             match: match[0],
             index: match.index,
             description: sig.description,
+            remediation: sig.remediation || null,
           });
           break; // Only report each signature once per message
         }
@@ -69,27 +71,6 @@ function scanMessage(message, options = {}) {
     riskScore: calculateRiskScore(threats),
     scannedAt: new Date().toISOString(),
   };
-}
-
-/**
- * Calculate a risk score from 0-100
- */
-function calculateRiskScore(threats) {
-  if (threats.length === 0) return 0;
-  
-  const severityScores = {
-    critical: 40,
-    high: 25,
-    medium: 15,
-    low: 5,
-  };
-  
-  let score = 0;
-  for (const threat of threats) {
-    score += severityScores[threat.severity] || 10;
-  }
-  
-  return Math.min(100, score);
 }
 
 /**
@@ -298,11 +279,18 @@ function scanOpenClawDirectory(openclawPath) {
     if (fs.existsSync(configPath)) {
       try {
         const content = fs.readFileSync(configPath, 'utf8');
+        let config;
+        
         if (configFile.endsWith('.json')) {
-          const config = JSON.parse(content);
-          results.configAudit = auditConfig(config);
+          config = JSON.parse(content);
+        } else {
+          // YAML parsing
+          config = parseSimpleYaml(content);
         }
-        // TODO: Add YAML parsing for .yaml/.yml files
+        
+        results.configAudit = auditConfig(config);
+        results.configFile = configFile;
+        break; // Use first config found
       } catch (err) {
         results.issues.push({
           type: 'parse_error',

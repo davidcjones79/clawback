@@ -1,195 +1,149 @@
 #!/usr/bin/env node
 /**
- * ClawGuard OpenClaw Integration Hook
+ * Clawback OpenClaw Integration Hook
  * 
  * This module provides integration points for OpenClaw:
  * 1. Pre-message scanning (before AI processes)
- * 2. Audit logging for sensitive actions
- * 3. Alert dispatching (Telegram, email, etc.)
+ * 2. Alert formatting for notifications
+ * 3. Quick check function for simple usage
  * 
  * Usage:
- *   Integrate into your OpenClaw heartbeat or as a preprocessing step
+ *   const { checkMessage } = require('clawback/src/openclaw-hook');
+ *   const result = checkMessage('user input here');
+ *   if (!result.safe) { // handle threat }
  */
 
-const { ClawGuardScanner } = require('./scanner');
-const fs = require('fs');
-const path = require('path');
-
-// Alert configuration (customize for your setup)
-const ALERT_CONFIG = {
-  telegram: {
-    enabled: true,
-    // Will use OpenClaw's message tool
-  },
-  email: {
-    enabled: true,
-    to: 'david@sonomait.com',
-    // Will use gog CLI
-  },
-  log: {
-    enabled: true,
-    path: path.join(__dirname, '..', 'logs', 'alerts.jsonl')
-  }
-};
-
-class ClawGuardHook {
-  constructor(options = {}) {
-    this.scanner = new ClawGuardScanner({
-      minSeverity: options.minSeverity || 'low'
-    });
-    this.config = { ...ALERT_CONFIG, ...options.alerts };
-  }
-
-  /**
-   * Scan incoming message before processing
-   * @param {string} message - The message content
-   * @param {object} context - Message context (sender, channel, etc.)
-   * @returns {object} Scan results with recommendation
-   */
-  scanMessage(message, context = {}) {
-    const results = this.scanner.scan(message, context);
-    
-    // Add recommendation
-    results.recommendation = this.getRecommendation(results);
-    
-    return results;
-  }
-
-  /**
-   * Get recommendation based on scan results
-   */
-  getRecommendation(results) {
-    if (results.blocked) {
-      return {
-        action: 'reject',
-        reason: `Blocked by ClawGuard: ${results.threats[0]?.name}`,
-        respond: true,
-        response: "I've detected potentially malicious content in your message and cannot process it for security reasons."
-      };
-    }
-    
-    if (results.summary.critical > 0 || results.summary.high > 0) {
-      return {
-        action: 'review',
-        reason: `High-severity threat detected: ${results.threats[0]?.name}`,
-        respond: false,
-        alertOwner: true
-      };
-    }
-    
-    if (results.summary.medium > 0) {
-      return {
-        action: 'proceed_with_caution',
-        reason: `Medium-severity pattern detected: ${results.threats[0]?.name}`,
-        respond: false,
-        alertOwner: true
-      };
-    }
-    
-    return {
-      action: 'proceed',
-      reason: null,
-      respond: false,
-      alertOwner: false
-    };
-  }
-
-  /**
-   * Generate alert message for detected threats
-   */
-  formatAlert(results, context = {}) {
-    const severity = results.summary.critical > 0 ? '🚨 CRITICAL' :
-                     results.summary.high > 0 ? '⚠️ HIGH' :
-                     '⚡ MEDIUM';
-    
-    let alert = `${severity} SECURITY ALERT\n\n`;
-    alert += `Source: ${context.source || 'unknown'}\n`;
-    alert += `Sender: ${context.sender || 'unknown'}\n`;
-    alert += `Time: ${results.timestamp}\n\n`;
-    
-    alert += `Threats Detected:\n`;
-    for (const threat of results.threats.slice(0, 3)) {
-      alert += `• ${threat.name} (${threat.severity})\n`;
-      alert += `  Pattern: "${threat.matches[0]}"\n`;
-    }
-    
-    if (results.blocked) {
-      alert += `\n🚫 Message was BLOCKED`;
-    }
-    
-    return alert;
-  }
-
-  /**
-   * Log alert to file
-   */
-  logAlert(results, context = {}) {
-    if (!this.config.log.enabled) return;
-    
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      results,
-      context,
-      alert_sent: true
-    };
-    
-    const logDir = path.dirname(this.config.log.path);
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-    
-    fs.appendFileSync(this.config.log.path, JSON.stringify(logEntry) + '\n');
-  }
-}
+const { scanMessage } = require('./scanner');
 
 /**
- * Quick scan function for simple usage
- */
-function quickScan(text, context = {}) {
-  const hook = new ClawGuardHook();
-  return hook.scanMessage(text, context);
-}
-
-/**
- * Check if message should be processed
- * Returns { safe: boolean, reason?: string, alert?: string }
+ * Check if a message should be processed
+ * @param {string} text - The message to check
+ * @param {object} context - Optional context (sender, channel, etc.)
+ * @returns {object} Check result
  */
 function checkMessage(text, context = {}) {
-  const hook = new ClawGuardHook();
-  const results = hook.scanMessage(text, context);
+  const results = scanMessage(text, { sensitivity: 'high' });
+  
+  // Determine overall safety
+  const hasCritical = results.threats.some(t => t.severity === 'critical');
+  const hasHigh = results.threats.some(t => t.severity === 'high');
   
   return {
-    safe: !results.blocked && results.summary.critical === 0 && results.summary.high === 0,
-    blocked: results.blocked,
-    threats: results.threats.length,
-    severity: results.summary.critical > 0 ? 'critical' :
-              results.summary.high > 0 ? 'high' :
-              results.summary.medium > 0 ? 'medium' :
-              results.summary.low > 0 ? 'low' : 'none',
-    reason: results.threats[0]?.name,
-    alert: results.threats.length > 0 ? hook.formatAlert(results, context) : null
+    safe: results.clean,
+    blocked: hasCritical,
+    threatCount: results.threatCount,
+    riskScore: results.riskScore,
+    severity: hasCritical ? 'critical' :
+              hasHigh ? 'high' :
+              results.threatCount > 0 ? 'medium' : 'none',
+    reason: results.threats[0]?.name || null,
+    threats: results.threats,
+    alert: results.threatCount > 0 ? formatAlert(results, context) : null,
+    recommendation: getRecommendation(results),
   };
+}
+
+/**
+ * Get recommendation based on scan results
+ */
+function getRecommendation(results) {
+  const hasCritical = results.threats.some(t => t.severity === 'critical');
+  const hasHigh = results.threats.some(t => t.severity === 'high');
+  const hasMedium = results.threats.some(t => t.severity === 'medium');
+  
+  if (hasCritical) {
+    return {
+      action: 'reject',
+      reason: `Critical threat: ${results.threats[0]?.name}`,
+      respond: true,
+      response: "I've detected potentially malicious content and cannot process this request.",
+    };
+  }
+  
+  if (hasHigh) {
+    return {
+      action: 'review',
+      reason: `High-severity threat: ${results.threats[0]?.name}`,
+      alertOwner: true,
+    };
+  }
+  
+  if (hasMedium) {
+    return {
+      action: 'proceed_with_caution',
+      reason: `Medium-severity pattern: ${results.threats[0]?.name}`,
+      alertOwner: true,
+    };
+  }
+  
+  return {
+    action: 'proceed',
+    reason: null,
+    alertOwner: false,
+  };
+}
+
+/**
+ * Format alert message for notifications
+ */
+function formatAlert(results, context = {}) {
+  const hasCritical = results.threats.some(t => t.severity === 'critical');
+  const hasHigh = results.threats.some(t => t.severity === 'high');
+  
+  const severity = hasCritical ? '🚨 CRITICAL' :
+                   hasHigh ? '⚠️ HIGH' : '⚡ MEDIUM';
+  
+  let alert = `${severity} SECURITY ALERT\n\n`;
+  if (context.source) alert += `Source: ${context.source}\n`;
+  if (context.sender) alert += `Sender: ${context.sender}\n`;
+  alert += `Time: ${results.scannedAt}\n`;
+  alert += `Risk Score: ${results.riskScore}/100\n\n`;
+  
+  alert += `Threats Detected:\n`;
+  for (const threat of results.threats.slice(0, 5)) {
+    alert += `• ${threat.name} [${threat.severity.toUpperCase()}]\n`;
+    alert += `  Match: "${threat.match}"\n`;
+  }
+  
+  if (results.threats.length > 5) {
+    alert += `\n... and ${results.threats.length - 5} more`;
+  }
+  
+  return alert;
+}
+
+/**
+ * Quick scan with simple boolean return
+ * @param {string} text - Text to scan
+ * @returns {boolean} True if safe, false if threats detected
+ */
+function isSafe(text) {
+  const result = scanMessage(text);
+  return result.clean;
 }
 
 // CLI for testing
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const text = args.join(' ') || 'Test message';
+  const text = args.filter(a => !a.startsWith('--')).join(' ') || 'Test message';
   
-  console.log('ClawGuard OpenClaw Hook - Test Mode\n');
+  console.log('Clawback OpenClaw Hook - Test Mode\n');
   console.log(`Scanning: "${text}"\n`);
   
-  const result = checkMessage(text, { source: 'test', sender: 'cli' });
+  const result = checkMessage(text, { source: 'cli', sender: 'test' });
   console.log('Result:', JSON.stringify(result, null, 2));
   
   if (result.alert) {
     console.log('\n--- Alert Message ---');
     console.log(result.alert);
   }
+  
+  process.exit(result.safe ? 0 : 1);
 }
 
 module.exports = {
-  ClawGuardHook,
-  quickScan,
-  checkMessage
+  checkMessage,
+  formatAlert,
+  isSafe,
+  getRecommendation,
 };

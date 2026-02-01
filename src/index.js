@@ -22,6 +22,18 @@ const {
   parseFrontmatter 
 } = require('./skill-scanner');
 
+const {
+  checkMessage,
+  isSafe,
+  formatAlert,
+} = require('./openclaw-hook');
+
+const {
+  calculateRiskScore,
+  getLineNumber,
+  parseSimpleYaml,
+} = require('./utils');
+
 module.exports = {
   // Core scanning
   scanMessage,
@@ -35,6 +47,16 @@ module.exports = {
   scanBashFile,
   scanSkillDirectory,
   parseFrontmatter,
+  
+  // OpenClaw integration
+  checkMessage,
+  isSafe,
+  formatAlert,
+  
+  // Utilities
+  calculateRiskScore,
+  getLineNumber,
+  parseSimpleYaml,
   
   // Signatures
   signatures,

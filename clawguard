@@ -1,7 +1,0 @@
-#!/usr/bin/env node
-/**
- * ClawGuard CLI
- * Security scanner for OpenClaw instances
- */
-
-require('./src/scanner.js');
