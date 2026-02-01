@@ -1,0 +1,32 @@
+{
+  "name": "clawguard",
+  "version": "0.1.0",
+  "description": "Security scanner and threat detection for OpenClaw AI assistant instances",
+  "main": "src/index.js",
+  "bin": {
+    "clawguard": "./src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js",
+    "test": "node --test tests/",
+    "lint": "eslint src/"
+  },
+  "keywords": [
+    "openclaw",
+    "security",
+    "ai-safety",
+    "prompt-injection",
+    "msp"
+  ],
+  "author": "David Jones <david@sonomait.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davidcjones79/clawguard.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
